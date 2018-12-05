@@ -1,6 +1,8 @@
 #include "../pch.h"
 
+#include "../../AuctionServerLib/AuctionServer.h"
 #include "../../AuctionServerLib/Auction.h"
+#include <thread>
 
 using Port = unsigned short;
 
@@ -31,10 +33,14 @@ namespace e2e {
 		}
 
 		void StartServer(){
-
+			_thread = std::thread([this]() {
+				_auctionServer.Run(_port);
+			});
 		}
 
 		void StopServer(){
+			_auctionServer.Stop();
+			_thread.join();
 		}
 
 		std::unique_ptr<Client> ConnectToServer() {
@@ -42,6 +48,8 @@ namespace e2e {
 		}
 
 		Port _port;
+		std::thread _thread;
+		AuctionServer _auctionServer;
 	};
 
 	TEST_F(AuctionServerTest, ConnectAndThenDisconnect) {

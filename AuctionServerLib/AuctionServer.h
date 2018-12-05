@@ -1,10 +1,17 @@
 #pragma once
+
+class AuctionServerImpl;
+
+using Port = unsigned short;
+
 class DLL_EXPORT AuctionServer
 {
+	AuctionServerImpl *_impl;
 public:
-	AuctionServer(unsigned short port);
+	AuctionServer();
 	virtual ~AuctionServer();
 
-	void run();
+	void Run(Port port);
+	void Stop();
 };
 

@@ -18,8 +18,8 @@ int main(int argc, char* argv[])
 
 		std::cout << "Starting AuctionServer on port " << port << std::endl;
 
-		AuctionServer server(port);
-		server.run();
+		AuctionServer server;
+		server.Run(port);
 	}
 	catch (std::exception& e)
 	{
