@@ -3,22 +3,34 @@
 #include "../../AuctionServerLib/AuctionServer.h"
 #include "../../AuctionServerLib/Auction.h"
 #include <thread>
+#include <boost/asio.hpp>
 
 using Port = unsigned short;
+using boost::asio::ip::tcp;
 
 namespace e2e {
 
 	class Client {
+		boost::asio::io_context _ioContext;
+		tcp::socket _socket;
+
 	public:
-		Client(Port port) {
-
+		Client(Port port) : _socket(_ioContext) {
+			tcp::resolver resolver(_ioContext);
+			auto x = resolver.resolve("127.0.0.1", std::to_string(port));
+			boost::asio::connect(_socket, x);
 		}
-		void Disconnect() {
 
+		void Disconnect() {
+			_socket.close();
 		}
 
 		std::vector<Auction> GetAuctions() {
 			return std::vector<Auction>();
+		}
+
+		bool IsConnected() const {
+			return _socket.is_open();
 		}
 	};
 
@@ -32,13 +44,13 @@ namespace e2e {
 			StopServer();
 		}
 
-		void StartServer(){
+		void StartServer() {
 			_thread = std::thread([this]() {
 				_auctionServer.Run(_port);
 			});
 		}
 
-		void StopServer(){
+		void StopServer() {
 			_auctionServer.Stop();
 			_thread.join();
 		}
@@ -54,6 +66,7 @@ namespace e2e {
 
 	TEST_F(AuctionServerTest, ConnectAndThenDisconnect) {
 		auto client = ConnectToServer();
+		EXPECT_TRUE(client->IsConnected());
 		client->Disconnect();
 	}
 
