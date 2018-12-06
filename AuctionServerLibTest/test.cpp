@@ -1,10 +1,5 @@
 #include "pch.h"
 
-TEST(TestCaseName, TestName) {
-  EXPECT_EQ(1, 1);
-  EXPECT_TRUE(true);
-}
-
 class Engine {
 public:
 	virtual void forward() = 0;
@@ -18,14 +13,13 @@ public:
 };
 
 
-using ::testing::AtLeast;                     // #1
+using ::testing::AtLeast;
 
 TEST(EngineTest, CanGoForwardAndBackward) {
-	MockEngine engine;                          // #2
-	EXPECT_CALL(engine, forward())              // #3
-		.Times(AtLeast(1));
+	MockEngine engine;
+	EXPECT_CALL(engine, forward()).Times(AtLeast(1));
+	EXPECT_CALL(engine, backward()).Times(AtLeast(1));
 
 	engine.forward();
-	//engine.backward();
-
+	engine.backward();
 }

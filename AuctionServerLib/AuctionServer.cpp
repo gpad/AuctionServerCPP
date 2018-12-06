@@ -33,7 +33,7 @@ public:
 	}
 };
 
-class TcpSession: public std::enable_shared_from_this<TcpSession>
+class TcpSession : public std::enable_shared_from_this<TcpSession>
 {
 public:
 	TcpSession(tcp::socket socket, Router router)
@@ -161,7 +161,7 @@ class AuctionServerImpl
 public:
 	void Run(unsigned short port) {
 
-		auto cmd1 = [](auto id, auto payload) { 
+		auto cmd1 = [](auto id, auto payload) {
 			auto auctions = std::vector<Auction>{ Auction(1, "ex_1"), Auction(2, "ex_2"), Auction(3, "ex_3") };
 			std::stringstream ss;
 			boost::archive::text_oarchive oa{ ss };
@@ -172,7 +172,7 @@ public:
 		auto commands = RouterBuilder()
 			.AddCommand(1, cmd1)
 			.Build();
-		
+
 		Server srv(_ioContext, port, Router(commands));
 
 		_ioContext.run();

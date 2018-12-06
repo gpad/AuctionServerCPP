@@ -11,7 +11,7 @@ TEST(ResponseTest, SpykeOnBuffer) {
 	int length = payload.size();
 	int commandId = 666;
 
-	std::array<int, 2> header { length, commandId };
+	std::array<int, 2> header{ length, commandId };
 
 	boost::asio::const_buffer buf1 = boost::asio::buffer(header);
 	EXPECT_EQ(buf1.size(), 8);
