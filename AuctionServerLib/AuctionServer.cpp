@@ -7,6 +7,29 @@
 
 using boost::asio::ip::tcp;
 
+class Response {
+
+public:
+	std::string Encode() { 
+
+		// it's composed by 8 byte of header
+		// 4 byte length
+		// 4 byte ret code
+		// payload
+
+
+		return "";
+	}
+	size_t Length() { return 0; }
+};
+
+class CommandRouter {
+public:
+	Response Execute(int commandId, std::string payload) {
+		return Response();
+	}
+};
+
 class TcpSession: public std::enable_shared_from_this<TcpSession>
 {
 public:
@@ -17,41 +40,73 @@ public:
 
 	void Start()
 	{
-		DoRead();
+		DoReadHeader();
 	}
 
 private:
-	void DoRead()
+	void DoReadHeader()
 	{
 		auto self(shared_from_this());
-		_socket.async_read_some(boost::asio::buffer(data_, max_length),
+		_socket.async_read_some(boost::asio::buffer(_header, header_length),
 			[this, self](boost::system::error_code ec, std::size_t length)
 		{
 			if (!ec)
 			{
-				DoWrite(length);
+				DoReadBody();
+			}
+			else {
+				// close connection
 			}
 		});
 	}
-
-	void DoWrite(std::size_t length)
-	{
+	void DoReadBody() {
 		auto self(shared_from_this());
-		boost::asio::async_write(_socket, boost::asio::buffer(data_, length),
+		boost::asio::async_read(_socket, boost::asio::buffer(_payload, GetRequiredPayloadLenght()),
 			[this, self](boost::system::error_code ec, std::size_t /*length*/)
 		{
 			if (!ec)
 			{
-				DoRead();
+				auto response = ExecuteCommand(GetCommandId(), GetStringPayload());
+				DoWrite(response);
+			}
+			else
+			{
+				_socket.close();
+			}
+		});
+
+	}
+
+	void DoWrite(Response response)
+	{
+		auto self(shared_from_this());
+		boost::asio::async_write(_socket, boost::asio::buffer(response.Encode(), response.Length()),
+			[this, self](boost::system::error_code ec, std::size_t /*length*/)
+		{
+			if (!ec)
+			{
+				DoReadHeader();
 			}
 		});
 	}
 
-	tcp::socket _socket;
-	enum { max_length = 1024 };
-	char data_[max_length];
-};
+	Response ExecuteCommand(int commandId, std::string payload) {
+		return _router.Execute(commandId, payload);
+	}
 
+	int GetCommandId() { return _header[1]; }
+
+	size_t GetRequiredPayloadLenght() { return _header[0]; }
+	std::string GetStringPayload() {
+		return std::string(_payload.begin(), _payload.end());
+	}
+
+	tcp::socket _socket;
+	enum { header_length = 1024 };
+	std::array<int, 2> _header;
+	std::vector<char> _payload;
+	CommandRouter _router;
+};
 
 class Server
 {
