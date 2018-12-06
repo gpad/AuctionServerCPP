@@ -17,8 +17,7 @@ namespace e2e {
 	public:
 		Client(Port port) : _socket(_ioContext) {
 			tcp::resolver resolver(_ioContext);
-			auto x = resolver.resolve("127.0.0.1", std::to_string(port));
-			boost::asio::connect(_socket, x);
+			boost::asio::connect(_socket, resolver.resolve("127.0.0.1", std::to_string(port)));
 		}
 
 		void Disconnect() {
@@ -26,11 +25,70 @@ namespace e2e {
 		}
 
 		std::vector<Auction> GetAuctions() {
-			return std::vector<Auction>();
+			// 4 byte length
+			// 4 byte command 
+			// payload
+
+			// CMD 1 -> Get List of Auctions
+			{
+				std::array<int, 2> data{ 0, 1 };
+				boost::asio::write(_socket, boost::asio::buffer(data));
+			}
+
+			// read response header
+			std::array<int, 2> header = ReadHeader();
+			std::string payload = ReadPayload(header);
+			return DecodePayload(payload);
 		}
 
 		bool IsConnected() const {
 			return _socket.is_open();
+		}
+
+		std::array<int, 2> ReadHeader()
+		{
+			std::array<int, 2> header;
+			std::size_t expected = sizeof(int) * 2;
+			boost::system::error_code error_code;
+			std::size_t received = 0;
+			boost::asio::async_read(_socket, boost::asio::buffer(header), [&error_code, &received](auto err, auto count) {
+				error_code = err;
+				received = count;
+			});
+
+			_ioContext.run_for(boost::asio::chrono::seconds(5));
+
+			if (error_code || (received < expected)) {
+				ADD_FAILURE() << "Timeout on receiving header, expected " << expected << " received: " << received;
+			}
+			return header;
+		}
+
+		std::string ReadPayload(const std::array<int, 2> &header)
+		{
+			// read response body
+			std::size_t expected = header[1];
+			boost::system::error_code error_code;
+			std::size_t received = 0;
+			std::vector<char> payload;
+			payload.resize(expected);
+			boost::asio::async_read(_socket, boost::asio::buffer(payload), [&error_code, &received](auto err, auto count) {
+				error_code = err;
+				received = count;
+			});
+
+			_ioContext.run_for(boost::asio::chrono::seconds(5));
+
+			if (error_code || (received < expected)) {
+				ADD_FAILURE() << "Timeout on receiving data, expected " << expected << " received: " << received;
+				return "";
+			}
+
+			return std::string(payload.begin(), payload.end());
+		}
+
+		std::vector<Auction> DecodePayload(std::string payload) {
+			return std::vector<Auction>();
 		}
 	};
 
