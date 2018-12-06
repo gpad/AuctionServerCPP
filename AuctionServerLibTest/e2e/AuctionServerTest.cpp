@@ -33,6 +33,7 @@ namespace e2e {
 			// payload
 
 			// CMD 1 -> Get List of Auctions
+
 			{
 				std::array<int, 2> data{ 0, 1 };
 				boost::asio::write(_socket, boost::asio::buffer(data));
@@ -54,6 +55,7 @@ namespace e2e {
 			std::size_t expected = sizeof(int) * 2;
 			boost::system::error_code error_code;
 			std::size_t received = 0;
+			_ioContext.restart();
 			boost::asio::async_read(_socket, boost::asio::buffer(header), [&error_code, &received](auto err, auto count) {
 				error_code = err;
 				received = count;
@@ -70,11 +72,12 @@ namespace e2e {
 		std::string ReadPayload(const std::array<int, 2> &header)
 		{
 			// read response body
-			std::size_t expected = header[1];
+			std::size_t expected = header[0];
 			boost::system::error_code error_code;
 			std::size_t received = 0;
 			std::vector<char> payload;
 			payload.resize(expected);
+			_ioContext.restart();
 			boost::asio::async_read(_socket, boost::asio::buffer(payload), [&error_code, &received](auto err, auto count) {
 				error_code = err;
 				received = count;

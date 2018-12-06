@@ -5,36 +5,39 @@
 #include <sstream>
 #include <boost/asio.hpp>
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
+
+#include "Response.h"
+#include "Auction.h"
+
 using boost::asio::ip::tcp;
+using Action = std::function<Response(int, std::string)>;
 
-class Response {
+class Router {
 
+	std::map<int, Action> _commands;
 public:
-	std::string Encode() { 
+	Router(std::map<int, Action> commands)
+		:_commands(commands)
+	{
 
-		// it's composed by 8 byte of header
-		// 4 byte length
-		// 4 byte ret code
-		// payload
-
-
-		return "";
 	}
-	size_t Length() { return 0; }
-};
-
-class CommandRouter {
-public:
 	Response Execute(int commandId, std::string payload) {
-		return Response();
+		auto command = _commands.find(commandId);
+		if (command != end(_commands)) {
+			return command->second(commandId, payload);
+		}
+		return Response::CommandNotFound();
 	}
 };
 
 class TcpSession: public std::enable_shared_from_this<TcpSession>
 {
 public:
-	TcpSession(tcp::socket socket)
-		: _socket(std::move(socket))
+	TcpSession(tcp::socket socket, Router router)
+		: _socket(std::move(socket)), _router(router), _response(Response::CommandNotFound())
 	{
 	}
 
@@ -66,8 +69,8 @@ private:
 		{
 			if (!ec)
 			{
-				auto response = ExecuteCommand(GetCommandId(), GetStringPayload());
-				DoWrite(response);
+				_response = ExecuteCommand(GetCommandId(), GetStringPayload());
+				DoWrite();
 			}
 			else
 			{
@@ -77,10 +80,10 @@ private:
 
 	}
 
-	void DoWrite(Response response)
+	void DoWrite()
 	{
 		auto self(shared_from_this());
-		boost::asio::async_write(_socket, boost::asio::buffer(response.Encode(), response.Length()),
+		boost::asio::async_write(_socket, _response.Encode(),
 			[this, self](boost::system::error_code ec, std::size_t /*length*/)
 		{
 			if (!ec)
@@ -105,14 +108,15 @@ private:
 	enum { header_length = 1024 };
 	std::array<int, 2> _header;
 	std::vector<char> _payload;
-	CommandRouter _router;
+	Router _router;
+	Response _response;
 };
 
 class Server
 {
 public:
-	Server(boost::asio::io_context& io_context, short port)
-		: _acceptor(io_context, tcp::endpoint(tcp::v4(), port))
+	Server(boost::asio::io_context& io_context, short port, Router router)
+		: _acceptor(io_context, tcp::endpoint(tcp::v4(), port)), _router(router)
 	{
 		DoAccept();
 	}
@@ -125,7 +129,7 @@ private:
 		{
 			if (!ec)
 			{
-				std::make_shared<TcpSession>(std::move(socket))->Start();
+				std::make_shared<TcpSession>(std::move(socket), _router)->Start();
 			}
 
 			DoAccept();
@@ -133,15 +137,43 @@ private:
 	}
 
 	tcp::acceptor _acceptor;
+	Router _router;
 };
 
+
+class RouterBuilder {
+	std::map<int, Action> _commands;
+public:
+	RouterBuilder& AddCommand(int commandId, Action action)
+	{
+		_commands[commandId] = action;
+		return *this;
+	}
+
+	std::map<int, Action> Build() {
+		return _commands;
+	}
+};
 
 class AuctionServerImpl
 {
 	boost::asio::io_context _ioContext;
 public:
 	void Run(unsigned short port) {
-		Server srv(_ioContext, port);
+
+		auto cmd1 = [](auto id, auto payload) { 
+			auto auctions = std::vector<Auction>{ Auction(1, "ex_1"), Auction(2, "ex_2"), Auction(3, "ex_3") };
+			std::stringstream ss;
+			boost::archive::text_oarchive oa{ ss };
+			oa << auctions;
+			return Response(ResponseCode::Ok, ss.str());
+		};
+
+		auto commands = RouterBuilder()
+			.AddCommand(1, cmd1)
+			.Build();
+		
+		Server srv(_ioContext, port, Router(commands));
 
 		_ioContext.run();
 	}
