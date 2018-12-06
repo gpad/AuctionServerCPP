@@ -4,6 +4,9 @@
 #include "../../AuctionServerLib/Auction.h"
 #include <thread>
 #include <boost/asio.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
 
 using Port = unsigned short;
 using boost::asio::ip::tcp;
@@ -88,7 +91,11 @@ namespace e2e {
 		}
 
 		std::vector<Auction> DecodePayload(std::string payload) {
-			return std::vector<Auction>();
+			std::stringstream ss(payload);
+			boost::archive::text_iarchive ia{ ss };
+			std::vector<Auction> result;
+			ia >> result;
+			return result;
 		}
 	};
 
@@ -134,5 +141,60 @@ namespace e2e {
 		auto auctions = client->GetAuctions();
 		auto expected_auctions = std::vector<Auction>{ Auction(1, "example_1"), Auction(2, "example_2"), Auction(3, "example_3") };
 		EXPECT_EQ(auctions, expected_auctions);
+	}
+
+	class animal
+	{
+	public:
+		animal() = default;
+		animal(int legs) : legs_{ legs } {}
+		int legs() const { return legs_; }
+
+		bool operator == (const animal &other) const {
+			return legs_ == other.legs_;
+		}
+
+	private:
+		friend class boost::serialization::access;
+
+		template <typename Archive>
+		void serialize(Archive &ar, const unsigned int version) { ar & legs_; }
+
+		int legs_;
+	};
+
+	TEST(BoostSerializationSpyke, TryToSerialize) {
+		std::stringstream ss;
+		{
+			boost::archive::text_oarchive oa{ ss };
+			oa << animal(1) << animal(2);
+		}
+		{
+			boost::archive::text_iarchive ia{ ss };
+			animal a1, a2;
+			ia >> a1 >> a2;
+			EXPECT_EQ(a1.legs(), 1);
+			EXPECT_EQ(a2.legs(), 2);
+		}
+	}
+
+
+	TEST(BoostSerializationSpyke, TryToSerializeVectorOf) {
+		std::string s;
+		{
+			std::stringstream ss;
+			boost::archive::text_oarchive oa{ ss };
+			std::vector<animal> write{ animal(1), animal(2), animal(3), animal(4) };
+			oa << write;
+			s = ss.str();
+		}
+		{
+			std::stringstream ss(s);
+			boost::archive::text_iarchive ia{ ss };
+			std::vector<animal> read;
+			ia >> read;
+			auto expected_animals = std::vector<animal>{ animal(1), animal(2), animal(3), animal(4) };
+			EXPECT_EQ(read, expected_animals);
+		}
 	}
 }

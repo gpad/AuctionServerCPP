@@ -66,6 +66,7 @@
     <Import Project="..\packages\boost_system-vc141.1.68.0.0\build\boost_system-vc141.targets" Condition="Exists('..\packages\boost_system-vc141.1.68.0.0\build\boost_system-vc141.targets')" />
     <Import Project="..\packages\boost_date_time-vc141.1.68.0.0\build\boost_date_time-vc141.targets" Condition="Exists('..\packages\boost_date_time-vc141.1.68.0.0\build\boost_date_time-vc141.targets')" />
     <Import Project="..\packages\boost_regex-vc141.1.68.0.0\build\boost_regex-vc141.targets" Condition="Exists('..\packages\boost_regex-vc141.1.68.0.0\build\boost_regex-vc141.targets')" />
+    <Import Project="..\packages\boost_serialization-vc141.1.68.0.0\build\boost_serialization-vc141.targets" Condition="Exists('..\packages\boost_serialization-vc141.1.68.0.0\build\boost_serialization-vc141.targets')" />
   </ImportGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -141,5 +142,6 @@
     <Error Condition="!Exists('..\packages\boost_system-vc141.1.68.0.0\build\boost_system-vc141.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost_system-vc141.1.68.0.0\build\boost_system-vc141.targets'))" />
     <Error Condition="!Exists('..\packages\boost_date_time-vc141.1.68.0.0\build\boost_date_time-vc141.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost_date_time-vc141.1.68.0.0\build\boost_date_time-vc141.targets'))" />
     <Error Condition="!Exists('..\packages\boost_regex-vc141.1.68.0.0\build\boost_regex-vc141.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost_regex-vc141.1.68.0.0\build\boost_regex-vc141.targets'))" />
+    <Error Condition="!Exists('..\packages\boost_serialization-vc141.1.68.0.0\build\boost_serialization-vc141.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\boost_serialization-vc141.1.68.0.0\build\boost_serialization-vc141.targets'))" />
   </Target>
 </Project>

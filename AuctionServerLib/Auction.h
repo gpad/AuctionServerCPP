@@ -1,12 +1,22 @@
 #pragma once
 
 #include <string>
+#include <boost/serialization/access.hpp>
 
 class DLL_EXPORT Auction
 {
 	int _id;
 	std::string _description;
+
+	friend class boost::serialization::access;
+
+	template <typename Archive>
+	void serialize(Archive &ar, const unsigned int version) { 
+		ar & _id;
+		ar & _description;
+	}
 public:
+	Auction():_id(-1){ }
 	Auction(int id, std::string description);
 	virtual ~Auction();
 
